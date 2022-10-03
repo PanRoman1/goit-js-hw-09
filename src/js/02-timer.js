@@ -17,8 +17,6 @@ const refs = {
 
 refs.startBtn.disabled = true;
 
-refs.startBtn.addEventListener('click', onStartBtnClick);
-
 let intervalId = null;
 
 const options = {
@@ -26,53 +24,46 @@ const options = {
   time_24hr: true,
   defaultDate: new Date(),
   minuteIncrement: 1,
-  
-  onClose(selectedDates) { 
-    let deltaTime = selectedDates[0].getTime() - Date.now();
-    if (deltaTime <= 0) Notify.failure('Please choose a date in the future');
-    else {
+  onClose(selectedDates) {
+    let deltaTime = selectedDates[0].getTime() - currentDate;
+
+    if (deltaTime <= 0) {
+      Notify.failure('Please choose a date in the future');
+    } else {
       refs.startBtn.disabled = false;
+     
+      refs.startBtn.addEventListener('click', () => {
+
+        intervalId = setInterval(() => {
+          
+          const newTime = Date.now();
+          this.isActive = true;
+          const newDelta = selectedDates[0].getTime() - newTime;
+          refs.date.disabled = true;          
+          refs.startBtn.disabled = true;          
+          const BackTimer = convertMs(newDelta);
+          refs.displaySeconds.textContent = addLeadingZero(BackTimer.seconds);
+          refs.displayMinutes.textContent = addLeadingZero(BackTimer.minutes);
+          refs.displayHours.textContent = addLeadingZero(BackTimer.hours);
+          refs.displayDays.textContent = addLeadingZero(BackTimer.days);
+          if (newDelta <= 1000) {
+            clearInterval(intervalId); 
+            Notify.info('The time is over!');
+            refs.date.disabled = false;
+          }
+        }, 1000);
+      });
     }
   },
 };
 
-const targetDate = flatpickr(refs.date, options);
+flatpickr(refs.date, options);
 
-function onStartBtnClick() {
-  outputTimer(targetDate.selectedDates[0].getTime());
-  intervalId = setInterval(
-    outputTimer,
-    1000,
-    targetDate.selectedDates[0].getTime()
-  );
-  refs.startBtn.disabled = true;
-  refs.date.disabled = true;  
-}
+const currentDate = Date.now();
 
-function currentTimerValue(targetTime) {
-  return convertMs(targetTime - Date.now());
-}
-
-function displayTimer({ days, hours, minutes, seconds }) {
-  refs.displayDays.textContent = days;
-  refs.displayHours.textContent = pad(hours);
-  refs.displayMinutes.textContent = pad(minutes);
-  refs.displaySeconds.textContent = pad(seconds);
-  if (days === 0 && hours === 0 && minutes === 0 && seconds === 0) {
-    clearInterval(intervalId);
-    Notify.info('The time is over!');
-    refs.date.disabled = false;
-  }
-}
-
-function outputTimer(selectedDate) {
-  displayTimer(currentTimerValue(selectedDate));
-}
-
-function pad(value) {
+function addLeadingZero(value) {
   return String(value).padStart(2, '0');
 }
-
 function convertMs(ms) {
   const second = 1000;
   const minute = second * 60;
@@ -84,7 +75,6 @@ function convertMs(ms) {
   const seconds = Math.floor((((ms % day) % hour) % minute) / second);
   return { days, hours, minutes, seconds };
 }
-
 
 refs.timer.style.display = 'flex';
 
